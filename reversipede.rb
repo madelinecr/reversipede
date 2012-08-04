@@ -17,7 +17,7 @@ class Game
   end
 
   def start
-    create_grid
+    create_entities
     while(!@game_quitting)
       tick
     end
@@ -43,29 +43,22 @@ class Game
     end
   end
 
-  def create_grid
+  def create_entities
     @tiles = []
     for x in 1..@grid_resolution do
       for y in 1..@grid_resolution do
         @tiles << Tile.new([x, y], [0x0c*x, 0xff, 0x0c*y])
       end
     end
-    puts @tiles
+    @tiles << @player
   end
 
   def draw
     @tiles.each do |tile|
-      tile_position = tile.pos.collect {|pos| (pos * @scale) }
-      tile_size     = tile.pos.collect {|pos| (pos * @scale) + @scale }
-      @screen.draw_box_s(tile_position, tile_size, tile.color)
+      pos  = tile.scaled_pos(@scale)
+      size = tile.scaled_size(@scale) 
+      @screen.draw_box_s(pos, size, tile.color)
     end
-    player_position = @player.pos.collect {|pos| (pos * @scale) }
-    player_size     = @player.pos.collect {|pos| (pos * @scale) + @scale }
-    @screen.draw_box_s(player_position, player_size, @player.color)
-  end
-
-  def draw_box
-    @screen.draw_box_s([10,30], @resolution, [0xc0, 0xff, 0xc0])
   end
 end
 
@@ -76,6 +69,14 @@ class Tile
   def initialize(pos, color)
     @pos = pos
     @color = color
+  end
+
+  def scaled_pos(scale)
+    pos.collect {|pos| (pos * scale) }
+  end
+
+  def scaled_size(scale)
+    pos.collect {|pos| (pos * scale) + scale }
   end
 end
 
