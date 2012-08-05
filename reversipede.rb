@@ -15,7 +15,7 @@ class Game
     @clock.target_framerate = 30
     @scale = 16
     @grid_resolution = 20
-    @player = Player.new([1, 1], [0xff, 0xff, 0xff])
+    @player = Player.new([176, 16], @scale)
   end
 
   def run
@@ -31,13 +31,13 @@ class Game
 
   private
   def create_entities
-    @tiles = []
-    for x in 1..@grid_resolution do
-      for y in 1..@grid_resolution do
-        @tiles << Tile.new([x, y], [0x0c*x, 0xff, 0x0c*y])
-      end
-    end
-    @tiles << @player
+  end
+
+  def draw_background
+    pos  = [@scale, @scale]
+    size = [@scale * @grid_resolution, @scale * @grid_resolution]
+    @screen.draw_box_s(pos, size, [0x00, 0x00, 0x00])
+    @screen.draw_box(pos, size, [0xff, 0xff, 0xff])
   end
 
   def handle_input
@@ -59,61 +59,98 @@ class Game
   end
 
   def update
-    @tiles.each do |tile|
-      tile.update
-    end
+    @player.update
   end
 
   def draw
-    @tiles.each do |tile|
-      pos  = tile.scaled_pos(@scale)
-      size = tile.scaled_size(@scale) 
-      @screen.draw_box_s(pos, size, tile.color)
+    draw_background
+    @player.draw(@screen)
+  end
+end
+
+module Entity
+
+  include Sprites::Sprite
+
+  def initialize(pos, image)
+    super()
+    @image = image
+    @rect = @image.make_rect
+    @rect.topleft = pos
+  end 
+end
+
+class Player
+
+  class Segment
+    include Entity
+  end
+
+  def initialize(pos, scale)
+    @sprite_head = Surface.load("assets/CentiHead.png")
+    @sprite_body = Surface.load("assets/CentiBody.png")
+    @length = 8
+    @head = Segment.new(pos, @sprite_head)
+    @segments = []
+    @direction = Hash.new
+    @moving = false
+    @speed = 5
+    @scale = scale
+    for i in 1..@length do
+      @segments << Segment.new([pos[0] - (@scale * i), pos[1]], @sprite_body)
     end
-  end
-end
-
-class Tile
-
-  attr_accessor :pos, :color
-
-  def initialize(pos, color)
-    @pos = pos
-    @color = color
-  end
-
-  def scaled_pos(scale)
-    pos.collect {|pos| (pos * scale) }
-  end
-
-  def scaled_size(scale)
-    pos.collect {|pos| (pos * scale) + scale }
-  end
-
-  def update
-  end
-end
-
-class Player < Tile
-
-  def initialize(pos, color)
-    super
-    @moving = { }
   end
 
   def on_press(args)
-    @moving[args] = true
+    @direction[args] = true
+    @moving = true
   end
 
   def on_release(args)
-    @moving[args] = false
+    @direction[args] = false
+    @moving = false
   end
 
   def update
-    @pos[1] -= 1 if @moving[:up]
-    @pos[1] += 1 if @moving[:down]
-    @pos[0] -= 1 if @moving[:left]
-    @pos[0] += 1 if @moving[:right]
+    if @moving
+      last_pos = @head.rect
+
+      @head.rect.move!(0, -@speed) if @direction[:up]
+      @head.rect.move!(0, @speed) if @direction[:down]
+      @head.rect.move!(@speed, 0) if @direction[:right]
+      @head.rect.move!(-@speed, 0) if @direction[:left]
+
+      puts last_pos
+
+      @segments.each do |segment|
+        segment.rect = last_pos
+        #segment.rect.move!(0, -@speed) if @direction[:up]
+        #segment.rect.move!(0, @speed) if @direction[:down]
+        #segment.rect.move!(@speed, 0) if @direction[:right]
+        #segment.rect.move!(-@speed, 0) if @direction[:left]
+      end
+    end
+    #puts "Updating! #{@moving}"
+    #next_pos = @head.rect
+    #puts next_pos
+    #@head.rect.move!(0, -@speed) if @direction[:up]
+    #@head.rect.move!(0, @speed) if @direction[:down]
+    #@head.rect.move!(@speed, 0) if @direction[:right]
+    #@head.rect.move!(-@speed, 0) if @direction[:left]
+    #if @moving
+    #  @segments.each do |segment|
+    #    current_pos = segment.rect
+    #    segment.rect = next_pos
+    #    next_pos = current_pos
+    #  end
+    #end
+  end
+
+  def draw(screen)
+    @head.draw(screen)
+    @segments.each do |segment|
+      segment.draw(screen)
+    end
   end
 end
 
